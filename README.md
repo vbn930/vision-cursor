@@ -102,5 +102,3 @@ python main.py
 
 **Author:** Dohun Lee
 **Contact:** vbn9302@gmail.com
-
-```
