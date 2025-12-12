@@ -5,20 +5,21 @@ import cv2
 import mediapipe as mp
 
 class Gesture(Enum):
-    ONE = auto(),
-    TWO = auto(),
-    THREE = auto(),
-    FOUR = auto(),
-    FIVE = auto(),
-    PINCH = auto(),
-    NONE = auto()
+    ONE = 1
+    TWO = 2
+    THREE = 3
+    FOUR = 4
+    FIVE = 5
+    PINCH = 6
+    NONE = 7
 
 
 class HandDetector:
     def __init__(self):
         # 클래스 변수
+        self.consecutive_num = 1
         self.gesture_queue = list(Gesture) # 5개 프레임에서 연속적으로 제스처가 인식 되어야 인정
-        self.gesture_queue = [Gesture.NONE] * 5
+        self.gesture_queue = [Gesture.NONE] * self.consecutive_num
         self.tip_location_x = 0
         self.tip_location_y = 0
 
@@ -41,16 +42,16 @@ class HandDetector:
 
         # 엄지: 랜드마크 4가 랜드마크 2의 오른쪽에 있으면 펼쳐진 상태
         if hand.landmark[4].x < hand.landmark[3].x:
-            fingers.append(True)
-        else:
             fingers.append(False)
+        else:
+            fingers.append(True)
 
         # 나머지 손가락: 각 손가락의 팁 (8, 12, 16, 20)이 PIP (6, 10, 14, 18) 위에 있으면 펼쳐진 상태
         tips = [8, 12, 16, 20]
-        pip_joints = [6, 10, 14, 18]
+        pip_joints = [5, 9, 13, 17]
         for tip, pip in zip(tips, pip_joints):
             if hand.landmark[tip].y < hand.landmark[pip].y:
-                fingers.append(True) # 굽은 상태
+                fingers.append(False) # 굽은 상태
             else:
                 fingers.append(True) # 펼쳐진 상태
 
@@ -68,11 +69,23 @@ class HandDetector:
         five = [False, False, False, False, False] # 모든 손가락 펴져 있는 상태
         pinch = [False, False, True, True, True] # 엄지, 검지 펴져 있는 상태
 
-        gesture_list = [one, two, three, four, five, pinch]
-
-        for i in range(len(gesture_list)):
-            if fingers is gesture_list[i]:
-                return Gesture(i + 1)
+        if fingers == one:
+            return Gesture.ONE
+        
+        if fingers == two:
+            return Gesture.TWO
+        
+        if fingers == three:
+            return Gesture.THREE
+        
+        if fingers == four:
+            return Gesture.FOUR
+        
+        if fingers == five:
+            return Gesture.FIVE
+        
+        if fingers == pinch:
+            return Gesture.PINCH
         
         return Gesture.NONE
     
@@ -81,7 +94,7 @@ class HandDetector:
         most_frequent = counts.most_common(1)
         val, count = most_frequent[0]
 
-        if count == 5:
+        if count == self.consecutive_num:
             return val
         else:
             return Gesture.NONE
@@ -103,7 +116,9 @@ class HandDetector:
                 fingers_status = self.get_finger_status(hand_landmarks)
                 gesture = self.get_frame_gesture(fingers_status)
                 self.add_gesture(gesture)
-                self.tip_location_x, self.tip_location_y = self.get_landmark_position(hand_landmarks, 8)
+
+                if (gesture == Gesture.ONE) or (gesture == Gesture.PINCH):
+                    self.tip_location_x, self.tip_location_y = self.get_landmark_position(hand_landmarks, 8)
 
                 # 손 랜드마크와 연결선 그리기
                 self.mp_drawing.draw_landmarks(frame, hand_landmarks, self.mp_hands.HAND_CONNECTIONS)
