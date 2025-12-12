@@ -24,9 +24,18 @@ class VisionCursor:
         if (self.prev_tip_location_x != self.hand_detector.tip_location_x) and (self.prev_tip_location_y != self.hand_detector.tip_location_y):
             return True
         return False
+    
+    def is_triggered(self, trigger: Gesture, next_gesture: Gesture) -> bool:
 
-    def is_clicked(self) -> bool:
-        if (self.prev_gesture == Gesture.CLICK) and (self.hand_detector.current_gesture == Gesture.PINCH):
+        if next_gesture == Gesture.NONE:
+            if (self.prev_gesture == trigger) and (self.hand_detector.current_gesture != self.prev_gesture):
+                print(f"Triggered by {trigger.name}")
+                return True
+            return
+
+
+        if (self.prev_gesture == trigger) and (self.hand_detector.current_gesture == next_gesture):
+            print(f"Triggered by {trigger.name}")
             return True
         return False
 
@@ -41,8 +50,13 @@ class VisionCursor:
                 y_ratio = self.hand_detector.tip_location_y + self.hand_detector.offset_y
                 self.mouse_controller.move_mouse_to(x_ratio, y_ratio)
 
-            if self.is_clicked():
+            if self.is_triggered(Gesture.CLICK, Gesture.PINCH):
                 self.mouse_controller.mouse_click()
+
+            if self.is_triggered(Gesture.FIST, Gesture.FIVE):
+                self.hand_detector.set_center_offset()
+                self.mouse_controller.move_mouse_to(0.5, 0.5)
+                pass
 
             self.prev_tip_location_x = self.hand_detector.tip_location_x
             self.prev_tip_location_y = self.hand_detector.tip_location_y

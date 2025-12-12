@@ -27,6 +27,9 @@ class HandDetector:
         self.tip_location_x = 0
         self.tip_location_y = 0
 
+        self.hand_center_position_x = 0.0
+        self.hand_center_position_y = 0.0
+
         self.offset_x = 0.0
         self.offset_y = 0.0
 
@@ -114,7 +117,17 @@ class HandDetector:
         
     def get_landmark_position(self, hands, landmark_num):
         return hands.landmark[landmark_num].x, hands.landmark[landmark_num].y
-        
+    
+    def set_center_offset(self):
+        self.offset_x = self.hand_center_position_x - 0.5
+        self.offset_y = self.hand_center_position_y - 0.5
+
+    def update_hand_center_position(self, hands):
+        self.hand_center_position_x, self.hand_center_position_y = self.get_landmark_position(hands, 9)
+
+    def update_tip_position(self, hands):
+        self.tip_location_x, self.tip_location_y = self.get_landmark_position(hands, 8)
+    
     def process_video(self) -> bool:
         ret, frame = self.video.read()
         if not ret:
@@ -129,27 +142,23 @@ class HandDetector:
                 fingers_status = self.get_finger_status(hand_landmarks)
                 gesture = self.get_frame_gesture(fingers_status)
                 self.add_gesture(gesture)
+                self.update_hand_center_position(hand_landmarks)
 
                 if gesture == Gesture.ONE:
-                    self.tip_location_x, self.tip_location_y = self.get_landmark_position(hand_landmarks, 8)
+                    self.update_tip_position(hand_landmarks)
                 elif gesture == Gesture.PINCH:
                     x1, y1 = self.get_landmark_position(hand_landmarks, 4)
                     x2, y2 = self.get_landmark_position(hand_landmarks, 8)
                     tip_dist = math.hypot(x1 - x2, y1 - y2) # 엄지와 검지 사이의 거리
                     if tip_dist < 0.05:
                         gesture = Gesture.CLICK
-                elif gesture == Gesture.FIST: # 중심 pivot 설정
-                    self.tip_location_x, self.tip_location_y = self.get_landmark_position(hand_landmarks, 8)
-                    self.offset_x = self.tip_location_x - 0.5
-                    self.offset_y = self.tip_location_y - 0.5
 
                 self.current_gesture = gesture
 
                 # 손 랜드마크와 연결선 그리기
                 self.mp_drawing.draw_landmarks(frame, hand_landmarks, self.mp_hands.HAND_CONNECTIONS)
         
-        print(f"Current Gesture: {self.current_gesture.name}, Tip pos: ({self.tip_location_y}, {self.tip_location_x})")
-        cv2.imshow('Hand Gesture', frame)
+        cv2.imshow('Vision Cursor', frame)
         if cv2.waitKey(1) == 27:  # ESC 키로 종료
             return False
 

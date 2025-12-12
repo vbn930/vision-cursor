@@ -16,5 +16,7 @@ class MouseController:
 
         pyautogui.moveTo(move_x, move_y)
 
+        print(f"Mouse moved to ({move_x}, {move_y})")
+
     def mouse_click(self):
         pyautogui.click()
