@@ -7,7 +7,7 @@ class MouseController:
         self.height = pyautogui.size().height
         pass
 
-    def move_mouse_to(self, x_ratio: float, y_ratio):
+    def move_mouse_to(self, x_ratio: float, y_ratio: float):
         move_x = int(self.width * x_ratio)
         move_y = int(self.height * y_ratio)
 
@@ -15,3 +15,6 @@ class MouseController:
         move_y = max(5, min(move_y, self.height - 5))
 
         pyautogui.moveTo(move_x, move_y)
+
+    def mouse_click(self):
+        pyautogui.click()

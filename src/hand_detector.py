@@ -1,18 +1,21 @@
 from enum import Enum, auto
 from collections import Counter
+import math
 
 import cv2
 import mediapipe as mp
 
 class Gesture(Enum):
+    NONE = 0
     ONE = 1
     TWO = 2
     THREE = 3
     FOUR = 4
     FIVE = 5
     PINCH = 6
-    NONE = 7
-
+    FIST = 7
+    CLICK = 8
+    DOUBLE_CLICK = 9
 
 class HandDetector:
     def __init__(self):
@@ -20,8 +23,14 @@ class HandDetector:
         self.consecutive_num = 1
         self.gesture_queue = list(Gesture) # 5개 프레임에서 연속적으로 제스처가 인식 되어야 인정
         self.gesture_queue = [Gesture.NONE] * self.consecutive_num
+
         self.tip_location_x = 0
         self.tip_location_y = 0
+
+        self.offset_x = 0.0
+        self.offset_y = 0.0
+
+        self.current_gesture = Gesture.NONE
 
         # Mediapipe 설정
         self.mp_hands = mp.solutions.hands
@@ -67,6 +76,7 @@ class HandDetector:
         three = [False, False, False, True, True] # 엄지, 검지, 중지 펴져 있는 상태
         four = [True, False, False, False, False] # 검지, 중지, 약지, 소지 펴져 있는 상태
         five = [False, False, False, False, False] # 모든 손가락 펴져 있는 상태
+        fist = [True, True, True, True, True]
         pinch = [False, False, True, True, True] # 엄지, 검지 펴져 있는 상태
 
         if fingers == one:
@@ -83,6 +93,9 @@ class HandDetector:
         
         if fingers == five:
             return Gesture.FIVE
+        
+        if fingers == fist:
+            return Gesture.FIST
         
         if fingers == pinch:
             return Gesture.PINCH
@@ -117,14 +130,25 @@ class HandDetector:
                 gesture = self.get_frame_gesture(fingers_status)
                 self.add_gesture(gesture)
 
-                if (gesture == Gesture.ONE) or (gesture == Gesture.PINCH):
+                if gesture == Gesture.ONE:
                     self.tip_location_x, self.tip_location_y = self.get_landmark_position(hand_landmarks, 8)
+                elif gesture == Gesture.PINCH:
+                    x1, y1 = self.get_landmark_position(hand_landmarks, 4)
+                    x2, y2 = self.get_landmark_position(hand_landmarks, 8)
+                    tip_dist = math.hypot(x1 - x2, y1 - y2) # 엄지와 검지 사이의 거리
+                    if tip_dist < 0.05:
+                        gesture = Gesture.CLICK
+                elif gesture == Gesture.FIST: # 중심 pivot 설정
+                    self.tip_location_x, self.tip_location_y = self.get_landmark_position(hand_landmarks, 8)
+                    self.offset_x = self.tip_location_x - 0.5
+                    self.offset_y = self.tip_location_y - 0.5
+
+                self.current_gesture = gesture
 
                 # 손 랜드마크와 연결선 그리기
                 self.mp_drawing.draw_landmarks(frame, hand_landmarks, self.mp_hands.HAND_CONNECTIONS)
-
-        current_gesture = self.get_current_gesture()
-        print(f"Current Gesture: {current_gesture.name}, Tip pos: ({self.tip_location_y}, {self.tip_location_x})")
+        
+        print(f"Current Gesture: {self.current_gesture.name}, Tip pos: ({self.tip_location_y}, {self.tip_location_x})")
         cv2.imshow('Hand Gesture', frame)
         if cv2.waitKey(1) == 27:  # ESC 키로 종료
             return False
