@@ -30,7 +30,7 @@ This project focuses on **dynamic calibration** and **signal stability** to solv
 ### 4. Safety & Exception Handling
 * **Boundary Clamping:** Prevents `PyAutoGUI` fail-safe errors by clamping cursor coordinates within the screen resolution (`max(5, min(width-5))`).
 
-## 🛠️ System Architecture
+## System Architecture
 
 The project follows a modular Object-Oriented Programming (OOP) structure:
 
@@ -45,7 +45,7 @@ vision-cursor/
 └── requirements.txt        # Dependencies
 ````
 
-## 🚀 Installation & Usage
+## Installation & Usage
 
 ### Prerequisites
 
