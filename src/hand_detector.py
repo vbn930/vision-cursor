@@ -19,6 +19,8 @@ class HandDetector:
         # 클래스 변수
         self.gesture_queue = list(Gesture) # 5개 프레임에서 연속적으로 제스처가 인식 되어야 인정
         self.gesture_queue = [Gesture.NONE] * 5
+        self.tip_location_x = 0
+        self.tip_location_y = 0
 
         # Mediapipe 설정
         self.mp_hands = mp.solutions.hands
@@ -77,13 +79,42 @@ class HandDetector:
     def get_current_gesture(self) -> Gesture:
         counts = Counter(self.gesture_queue)
         most_frequent = counts.most_common(1)
-        print(most_frequent)
         val, count = most_frequent[0]
 
-        if count is 5:
+        if count == 5:
             return val
         else:
             return Gesture.NONE
         
-    def process_video(self):
-        pass
+    def get_landmark_position(self, hands, landmark_num):
+        return hands.landmark[landmark_num].x, hands.landmark[landmark_num].y
+        
+    def process_video(self) -> bool:
+        ret, frame = self.video.read()
+        if not ret:
+            return False
+
+        frame = cv2.flip(frame, 1)
+        img_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        result = self.hands.process(img_rgb)
+
+        if result.multi_hand_landmarks:
+            for hand_landmarks in result.multi_hand_landmarks:
+                fingers_status = self.get_finger_status(hand_landmarks)
+                gesture = self.get_frame_gesture(fingers_status)
+                self.add_gesture(gesture)
+                self.tip_location_x, self.tip_location_y = self.get_landmark_position(hand_landmarks, 8)
+
+                # 손 랜드마크와 연결선 그리기
+                self.mp_drawing.draw_landmarks(frame, hand_landmarks, self.mp_hands.HAND_CONNECTIONS)
+
+        current_gesture = self.get_current_gesture()
+        print(f"Current Gesture: {current_gesture.name}, Tip pos: ({self.tip_location_y}, {self.tip_location_x})")
+        cv2.imshow('Hand Gesture', frame)
+        if cv2.waitKey(1) == 27:  # ESC 키로 종료
+            return False
+
+        return True
+
+    def is_video_opened(self) -> bool:
+        return self.video.isOpened()
