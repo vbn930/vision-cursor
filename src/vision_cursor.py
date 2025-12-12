@@ -42,7 +42,6 @@ class VisionCursor:
                 self.mouse_controller.move_mouse_to(x_ratio, y_ratio)
 
             if self.is_clicked():
-                print("Mouse Clicked!!")
                 self.mouse_controller.mouse_click()
 
             self.prev_tip_location_x = self.hand_detector.tip_location_x
